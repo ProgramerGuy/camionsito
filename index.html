@@ -27,21 +27,28 @@
 
     const topic = "carrito/accion";
     const client = mqtt.connect(broker, options);
-
-    client.on("connect", () => {
-      console.log("Conectado a MQTT");
-    });
-
-    const botones = ["Botón 0", "Botón 1", "Botón 2", "Botón 3", "Botón 4"];
+  
+    client.on("connect", () => console.log("✅ Conectado a MQTT"));
+  
+    const botones = ["Adelante", "Atrás", "Izquierda", "Derecha", "Turbo"];
     const div = document.getElementById("botones");
-
+  
     botones.forEach((texto, i) => {
       const btn = document.createElement("button");
       btn.textContent = texto;
-      btn.onclick = () => client.publish(topic, i.toString());
+      
+      // Mantener HIGH mientras esté presionado
+      btn.onmousedown = () => client.publish(topic, `press_${i}`);
+      btn.ontouchstart = (e) => { e.preventDefault(); client.publish(topic, `press_${i}`); };
+  
+      // Mandar LOW al soltar
+      btn.onmouseup = () => client.publish(topic, `release_${i}`);
+      btn.onmouseleave = () => client.publish(topic, `release_${i}`);
+      btn.ontouchend = (e) => { e.preventDefault(); client.publish(topic, `release_${i}`); };
+  
       div.appendChild(btn);
-    });
   </script>
 </body>
 </html>
+
 
