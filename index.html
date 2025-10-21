@@ -1,57 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Carrito IoT</title>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <style>
-    body { font-family: sans-serif; text-align: center; background: #111; color: white; }
-    button { margin: 10px; padding: 15px 30px; font-size: 18px; border: none; border-radius: 12px; background: #ff4444; color: white; cursor: pointer; }
-    button:hover { background: #ff6666; }
-  </style>
-</head>
-<body>
-  <h1>🚗 Control Remoto IoT</h1>
-  <p>Haz clic para enviar comandos al carrito</p>
-
-  <div id="botones"></div>
-
-  <script>
-    const broker = "wss://b3b91384be8341c88c83bd5a612a39f0.s1.eu.hivemq.cloud:8884/mqtt"; // tu cluster
-    const options = {
-      username: "carrito",
-      password: "Carrito101011",
-      reconnectPeriod: 1000,
-      connectTimeout: 4000,
-    };
-
-    const topic = "carrito/accion";
-    const client = mqtt.connect(broker, options);
-  
-    client.on("connect", () => console.log("✅ Conectado a MQTT"));
-  
-    const botones = ["Adelante", "Atrás", "Escabar", "Derecha", "Izquierda"];
-    const div = document.getElementById("botones");
-  
-    botones.forEach((texto, i) => {
-      const btn = document.createElement("button");
-      btn.textContent = texto;
-      
-      // Mantener HIGH mientras esté presionado
-      btn.onmousedown = () => client.publish(topic, `press_${i}`);
-      btn.ontouchstart = (e) => { e.preventDefault(); client.publish(topic, `press_${i}`); };
-  
-      // Mandar LOW al soltar
-      btn.onmouseup = () => client.publish(topic, `release_${i}`);
-      btn.onmouseleave = () => client.publish(topic, `release_${i}`);
-      btn.ontouchend = (e) => { e.preventDefault(); client.publish(topic, `release_${i}`); };
-  
-      div.appendChild(btn);
-      });
-  </script>
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -64,19 +10,17 @@
       background: #0b0c10;
       color: #fff;
       text-align: center;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      margin: 0;
+      padding: 0;
     }
-    h1 { margin-bottom: 10px; }
+    h1 { margin-top: 10px; }
     #pad {
       display: grid;
       grid-template-columns: 80px 80px 80px;
       grid-template-rows: 80px 80px 80px;
       gap: 10px;
-      margin: 30px;
+      justify-content: center;
+      margin: 20px auto;
     }
     button {
       border: none;
@@ -100,35 +44,78 @@
     #status {
       font-size: 14px;
       opacity: 0.8;
+      margin-bottom: 15px;
+    }
+    iframe {
+      width: 90%;
+      max-width: 640px;
+      height: 360px;
+      border: 3px solid #333;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+    @media (max-width: 600px) {
+      #pad {
+        grid-template-columns: 60px 60px 60px;
+        grid-template-rows: 60px 60px 60px;
+      }
+      button {
+        font-size: 16px;
+      }
+      #extra {
+        padding: 10px 25px;
+        font-size: 18px;
+      }
     }
   </style>
 </head>
 <body>
   <h1>🚜 Control IoT del Carrito</h1>
-  <p>Usa los botones o las teclas <b>W, A, S, D</b> y <b>Espacio</b></p>
-
-  <div id="pad">
-    <div></div>
-    <button id="up">↑</button>
-    <div></div>
-
-    <button id="left">←</button>
-    <div></div>
-    <button id="right">→</button>
-
-    <div></div>
-    <button id="down">↓</button>
-    <div></div>
+  <div id="videoContainer"></div>
+  <p id="status">Conectando...</p>
+  <div id="controls" style="display:none;">
+    <p>Usa los botones o las teclas <b>W, A, S, D</b> y <b>Espacio</b></p>
+    <div id="pad">
+      <div></div><button id="up">↑</button><div></div>
+      <button id="left">←</button><div></div><button id="right">→</button>
+      <div></div><button id="down">↓</button><div></div>
+    </div>
+    <button id="extra">⛏️ Escarbar</button>
   </div>
 
-  <button id="extra">⛏️ Escarbar</button>
-  <p id="status">Conectando...</p>
-
   <script>
-    // -----------------------------
-    // CONFIGURACIÓN MQTT
-    // -----------------------------
-    const broker = "wss://b3b91384be8341c88c83bd5a612a39f0.s1.eu.hivemq.cloud:8884/mqtt"; // tu cluster
+    // ========================
+    // 🔐 TOKEN DE ACCESO
+    // ========================
+    const TOKEN_VALIDO = "rojo23"; // mismo token que usa Flask
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+
+    if (token !== TOKEN_VALIDO) {
+      document.body.innerHTML = `
+        <h1>🚫 Acceso denegado</h1>
+        <p>Token inválido o faltante. No puedes controlar ni ver la cámara.</p>
+      `;
+      throw new Error("Token inválido");
+    }
+
+    // ========================
+    // 📷 VIDEO STREAM
+    // ========================
+    const videoContainer = document.getElementById("videoContainer");
+
+    // Reemplaza el enlace con el de tu túnel Cloudflare real:
+    const CAMERA_URL = "https://customize-vision-procedure-salary.trycloudflare.com/stream?token=" + token;
+
+    const iframe = document.createElement("iframe");
+    iframe.src = CAMERA_URL;
+    iframe.allow = "autoplay";
+    videoContainer.appendChild(iframe);
+
+    // ========================
+    // 🚗 CONTROL DEL CARRITO (MQTT)
+    // ========================
+    const broker = "wss://b3b91384be8341c88c83bd5a612a39f0.s1.eu.hivemq.cloud:8884/mqtt";
     const options = {
       username: "carrito",
       password: "Carrito101011",
@@ -139,23 +126,22 @@
     const client = mqtt.connect(broker, options);
 
     const statusEl = document.getElementById("status");
+    const controls = document.getElementById("controls");
 
     client.on("connect", () => {
       statusEl.textContent = "✅ Conectado a MQTT";
+      controls.style.display = "block";
     });
     client.on("error", (err) => {
       statusEl.textContent = "❌ Error de conexión: " + err.message;
     });
 
-    // -----------------------------
-    // MAPA DE BOTONES
-    // -----------------------------
     const controles = {
       up: 0,
       down: 1,
+      extra: 2,  // Escarbar
       left: 3,
-      right: 4,
-      extra: 2, // Escarbar
+      right: 4
     };
 
     function sendPress(id) {
@@ -171,9 +157,6 @@
       }
     }
 
-    // -----------------------------
-    // EVENTOS DE BOTONES TÁCTILES
-    // -----------------------------
     Object.keys(controles).forEach(id => {
       const btn = document.getElementById(id);
       if (!btn) return;
@@ -186,9 +169,6 @@
       btn.ontouchend = e => { e.preventDefault(); sendRelease(id); };
     });
 
-    // -----------------------------
-    // EVENTOS DE TECLADO
-    // -----------------------------
     const keyMap = {
       'w': 'up',
       'a': 'left',
@@ -205,7 +185,6 @@
         sendPress(keyMap[key]);
       }
     });
-
     document.addEventListener('keyup', (e) => {
       const key = e.key.toLowerCase();
       if (keyMap[key]) {
@@ -216,8 +195,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
