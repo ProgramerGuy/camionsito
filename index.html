@@ -105,12 +105,12 @@
     const videoContainer = document.getElementById("videoContainer");
 
     // Reemplaza el enlace con el de tu túnel Cloudflare real:
-    const CAMERA_URL = "https://customize-vision-procedure-salary.trycloudflare.com/stream?token=" + token;
+    const CAMERA_URL = "https://preview-residents-spring-designs.trycloudflare.com/cam";
 
-    const iframe = document.createElement("iframe");
-    iframe.src = CAMERA_URL;
-    iframe.allow = "autoplay";
-    videoContainer.appendChild(iframe);
+    // const iframe = document.createElement("iframe");
+    // iframe.src = CAMERA_URL;
+    // iframe.allow = "autoplay";
+    // videoContainer.appendChild(iframe);
 
     // ========================
     // 🚗 CONTROL DEL CARRITO (MQTT)
@@ -192,6 +192,55 @@
         sendRelease(keyMap[key]);
       }
     });
+
+    // ========================
+    // 📹 STREAM WEBCAM CON WEBRTC
+    // ========================
+    
+    // Función para crear un video WebRTC nativo
+    async function startWebRTCStream(url) {
+      const pc = new RTCPeerConnection();
+    
+      // Crear video element
+      const videoEl = document.createElement("video");
+      videoEl.autoplay = true;
+      videoEl.controls = true;
+      videoEl.style.width = "90%";
+      videoEl.style.maxWidth = "640px";
+      videoEl.style.border = "3px solid #333";
+      videoEl.style.borderRadius = "10px";
+      videoContainer.appendChild(videoEl);
+    
+      // Reproducir la pista entrante
+      pc.ontrack = (event) => {
+        videoEl.srcObject = event.streams[0];
+      };
+    
+      // Crear DataChannel (opcional)
+      const dc = pc.createDataChannel("data");
+    
+      // Fetch SDP offer desde MediaMTX
+      const response = await fetch(url + "/webrtc?token=" + token, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const offer = await response.json();
+    
+      await pc.setRemoteDescription({ type: "offer", sdp: offer.sdp });
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+    
+      // Enviar SDP answer al servidor
+      await fetch(url + "/webrtc?token=" + token, {
+        method: "POST",
+        body: JSON.stringify(pc.localDescription),
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    
+    // Reemplaza CAMERA_URL por la URL de tu Cloudflare Tunnel
+    startWebRTCStream(CAMERA_URL);
   </script>
 </body>
 </html>
+
